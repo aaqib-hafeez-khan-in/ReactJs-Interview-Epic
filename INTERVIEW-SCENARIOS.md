@@ -110,3 +110,74 @@ Start with evidence, not fashionable APIs:
 6. Explain the trade-off and regression risk.
 
 The goal is a UI that remains correct, accessible, observable and maintainable as it grows.
+
+## Render storm after a small state change
+
+A button updates one piece of state, but a large subtree re-renders and the interaction becomes slow.
+
+### Investigate
+
+Profile the interaction first. Identify which state owner changed, which children actually consume that state, whether context propagation is involved, and whether expensive work is repeated during render.
+
+### Strong answer
+
+Move state closer to the components that need it when possible. Split broad contexts, reduce unnecessary subscriptions, and only then consider memoization or other performance techniques where profiling shows a benefit.
+
+### Follow-up
+
+Does a component re-rendering prove the DOM changed?
+
+No. Rendering recalculates the UI description; reconciliation determines whether host updates are required.
+
+## Stale closure breaks an interaction
+
+A timer, subscription or event handler uses an older state value even though the screen displays the latest value.
+
+### Strong answer
+
+Explain the closure that captured the older render's value. Choose the fix based on the operation: functional state updates for derived next state, correct dependencies for effects, or a ref when mutable latest-value access is genuinely required.
+
+### Trap
+
+Do not silence dependency warnings simply to stop an effect from running. First establish what value the synchronization actually depends on.
+
+## Effect loop appears after adding a dependency
+
+Adding a function or object to an effect dependency array causes repeated execution.
+
+### Investigate
+
+Determine whether the dependency is recreated during render, whether the effect is needed at all, and whether the external system is the real source of the required synchronization.
+
+### Strong answer
+
+Prefer restructuring the code to remove unnecessary effect dependencies over memoizing everything. Memoization is a tool for preserving identity when identity itself matters; it should not be used to conceal an architectural problem.
+
+## Server/client boundary mistake
+
+A modern React application fails because browser-only logic or non-serializable data crosses a server/client boundary.
+
+### Strong answer
+
+Identify which code must execute on the server and which requires client capabilities such as state, effects or browser APIs. Keep the boundary as small as practical and pass only data that the framework/runtime can safely transport.
+
+### Senior-level point
+
+The goal is not to make everything client-side. Server/client placement affects bundle size, latency, data access, security and caching behavior.
+
+## Production interaction regression
+
+A release increases interaction latency for a previously fast screen.
+
+### Debugging sequence
+
+1. Compare the regression against the release boundary.
+2. Use profiling to identify expensive renders or calculations.
+3. Check bundle and network changes.
+4. Inspect data volume and cache behavior.
+5. Check long tasks and main-thread contention.
+6. Reproduce with realistic production-like data.
+
+### Senior-level point
+
+Optimize the measured bottleneck and define a regression guardrail rather than applying a generic optimization checklist.
